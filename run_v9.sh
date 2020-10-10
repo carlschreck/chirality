@@ -34,8 +34,8 @@ movie=${20}
 
 prodfile=prod_v9_ar${ar}_L${Lx}_layer${layerdepth}_desync${desync}_seed$7_b${b}_twist${twist}
 
-rundir=~/production/linear_front_ellipse_damped_removepart_twist
-outdir=/global/cscratch1/sd/cschreck/linear_front_ellipse_damped_removepart_twist
+rundir=./ #~/production/linear_front_ellipse_damped_removepart_twist
+outdir=./ #/global/cscratch1/sd/cschreck/linear_front_ellipse_damped_removepart_twist
 
 cd $outdir
 

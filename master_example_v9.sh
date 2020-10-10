@@ -1,13 +1,13 @@
 #!/bin/bash
 
-ar=3.0
-Lx=5.0
-D1=1.0
+ar=1.3
+D1=1.6
+Lx=20.0
 
 twist=15.0
 
-layerwidth=1.0
 layerdepth=13.0
+layerwidth=1.0
 frontdepth=2.0
 
 propdepth=4.0
@@ -18,10 +18,10 @@ rate0=1.0
 desync=0.4
 seed=101
 
-numsteps=2000000 # shorter example run
+numsteps=1300000  # for production: numsteps=250000000
 dataskip=100000
-prodskip=100000
-layerskip=200
+prodskip=20000    # for production: prodskip=100000
+layerskip=100
 dt=4e-6
 b=4e3
 

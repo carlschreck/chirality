@@ -79,8 +79,8 @@
             
       ! read overdamped MD parameters
       read(*,*) numsteps      ! number of growth steps in simulation 
+      read(*,*) dataskip      ! number of steps between outputting to screen
       read(*,*) prodskip      ! number of steps between outputting cell info
-      read(*,*) dataskip      ! number of steps between outputting data
       read(*,*) layerskip     ! number of steps between calulating depth 
       read(*,*) dt            ! time-step
       read(*,*) b             ! damping coefficient
@@ -111,27 +111,63 @@
       call initialize(N,c,d,x,y,th,inert,rate0,rate,vx,vy,vth,ax,ay,ath,
      +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,seed)
 
-      ! output configuration
-      if(mod(k,prodskip).eq.0) then
-         write(1,*) N
-         do i=1,N                        
-            write(1,'(6E,I)') x(i),y(i),th(i),d(i),
-     +           d(i)*alpha(i),depth(i),c(i)
-         enddo
-      endif
+      ! output initial configuration
+      write(1,*) N
+      do i=1,N                        
+         write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
+     +        d(i)*alpha(i),depth(i),c(i)
+      enddo
          
-      ! loop over time-steps until # cells = Npop 
+      ! loop over time-steps 
       Nsum=N
       do k=1,numsteps
          
          ! calculate depth from front
          if(mod(k,layerskip).eq.0) then
-            call calc_depth(N,Lx,d,x,y,layerwidth,depth)            
+            call calc_depth(N,Lx,d,x,y,layerwidth,depth)
+            call remove_cells(N,Nforce,Ntrail,d,x,y,th,alpha,inert,
+     +           c,rate,rate0,depth,vx,vy,vth,ax,ay,ath,bx,by,bth,
+     +           forcelist,traillist,xp,yp,nl,countn,bound)
          endif
-          
-         ! count # in growth layer
-         ntUL=0
-         ntDL=0
+
+         ! grow and divide cells
+         Nprev=N
+         call grow_cells(N,Nsum,dt,x,y,th,D,c,rate,alpha0,rate0,
+     +        seed,desync,traillist,depth,layerdepth,propdepth,
+     +        bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth)
+         if(N.gt.Nprev) then
+            call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
+         endif
+
+         ! calculate inertia
+         do i=1,N
+            inert(i)=(1d0+alpha(i)**2)/16d0*d(i)**2
+         enddo
+
+         ! update neighborlist
+         call checklist(N,x,y,xp,yp,maxdis)
+         if(maxdis.gt.width) then ! fix - update if cell divides
+            call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
+         end if
+
+         ! Gear precictor corrector
+         call predict(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth)
+         call force(N,x,y,th,D,V,P,fx,fy,fth,torque)
+         call correct(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth,
+     +        fx,fy,fth,inert,b)
+
+         ! output configuration
+         if(mod(k,prodskip).eq.0) then
+            write(1,*) N
+            do i=1,N
+               write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
+     +              d(i)*alpha(i),depth(i),c(i)
+            enddo
+         endif
+
+         ! count # cells in growth layer
+         ntUL=0  ! # in top layer
+         ntDL=0  ! # on bottom layer
          do i=1,N
             if(depth(i).lt.layerdepth) then
                if(y(i).gt.0) then
@@ -142,48 +178,10 @@
             endif
          enddo
 
-         ! output configuration
-         if(mod(k,prodskip).eq.0) then
-            write(1,*) N
-            do i=1,N                        
-               write(1,'(6E,I)') x(i),y(i),th(i),d(i),
-     +              d(i)*alpha(i),depth(i),c(i)
-            enddo
-         endif
- 
          ! print summary to screen
-         if(mod(k,prodskip).eq.0) then
-            write(*,'(6I,E)')k,Nsum,N,Nforce,ntUL,ntDL,V/dble(N)
+         if(mod(k,dataskip).eq.0) then
+            write(*,'(6I8,E20.10)')k,Nsum,N,Nforce,ntUL,ntDL,V/dble(N)
          endif
-
-         ! grow and divide cells
-         Nprev=N
-         call grow_cells(N,Nsum,dt,x,y,th,D,c,rate,alpha0,rate0,
-     +        seed,desync,traillist,depth,layerdepth,propdepth,
-     +        bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth)
-         if(N.gt.Nprev) then            
-            call makelist(N,x,y,D,xp,yp,countn,nl,alpha0) 
-         endif
-         
-         ! calculate inertia
-         do i=1,N
-            inert(i)=(1d0+alpha(i)**2)/16d0*d(i)**2
-         enddo
-         
-         ! update neighborlist
-         call checklist(N,x,y,xp,yp,maxdis)
-         if(maxdis.gt.width) then ! fix - update if cell divides
-            call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
-            call remove_cells(N,Nforce,Ntrail,d,x,y,th,alpha,
-     +           inert,c,rate,rate0,depth,vx,vy,vth,ax,ay,ath,
-     +           bx,by,bth,forcelist,traillist,xp,yp)
-         end if
-
-         ! Gear precictor corrector
-         call predict(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth)
-         call force(N,x,y,th,D,V,P,fx,fy,fth,Lx,torque)
-         call correct(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth,
-     +        fx,fy,fth,inert,b)
          
       enddo
       
@@ -212,11 +210,11 @@
       common /f12com/ nl,countn
       
       ! random initial config for line of cells
-      N=2*floor(Lx/2d0)
+      N=floor(Lx/2d0/D1/alpha0)
       do i=1,N     
          c(i)=i
          d(i)=D1
-         x(i)=dble(i)-dble(N+1)/2d0
+         x(i)=(dble(i)-dble(N+1)/2d0)*D1*2d0*alpha0
          y(i)=0d0
          th(i)=(ran2(seed)-0.5d0)*2d0*pi 
          alpha(i)=alpha0*(1d0+ran2(seed))
@@ -232,7 +230,7 @@
          bound(i)=0
       enddo
       call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
-      call force(N,x,y,th,D,V,P,fx,fy,fth,Lx,torque)
+      call force(N,x,y,th,D,V,P,fx,fy,fth,torque)
       do i=1,N
          vx(i)=b*fx(i)
          vy(i)=b*fy(i)
@@ -413,9 +411,9 @@
       
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine remove_cells(N,Nforce,Ntrail,d,x,y,th,alpha,
-     +     inert,c,rate,rate0,depth,vx,vy,vth,ax,xy,ath,
-     +     bx,by,bth,forcelist,traillist,xp,yp)
-      
+     +     inert,c,rate,rate0,depth,vx,vy,vth,ax,ay,ath,
+     +     bx,by,bth,forcelist,traillist,xp,yp,nl,countn,bound)     
+ 
       integer Ntot
       parameter(Ntot=2**18)      
       double precision x(Ntot),y(Ntot),th(Ntot),alpha(Ntot),depth(Ntot)
@@ -424,8 +422,10 @@
       double precision bx(Ntot),by(Ntot),bth(Ntot),inert(Ntot)
       double precision xp(Ntot),yp(Ntot)
       integer N,Nforce,Ntrail,Nkeep,c(Ntot),keeppart(Ntot)
-      integer forcelist(Ntot),traillist(Ntot)
-      
+      integer forcelist(Ntot),traillist(Ntot),renumber(Ntot)
+      integer countn(Ntot),nl(100,Ntot),ikeep,jkeep,bound(Ntot)
+
+      ! make list of cells to keep 
       do i=1,N         
          keeppart(i)=0
       enddo
@@ -435,35 +435,67 @@
       do i=1,Ntrail
          keeppart(traillist(i))=1
       enddo
-      Nkeep=0
+
+      ! remove cells & shift values to lower indices
+      ikeep=0
       do i=1,N
          if(keeppart(i).eq.1) then
-            Nkeep=Nkeep+1
-            x(Nkeep)=x(i)
-            y(Nkeep)=y(i)
-            th(Nkeep)=th(i)
-            d(Nkeep)=d(i)
-            alpha(Nkeep)=alpha(i)
-            inert(Nkeep)=inert(i)
-            c(Nkeep)=c(i)
-            rate(Nkeep)=rate(i)
-            rate0(Nkeep)=rate0(i)   
-            depth(Nkeep)=depth(i)
-            vx(Nkeep)=vx(i)
-            ax(Nkeep)=ax(i)
-            bx(Nkeep)=bx(i)
-            vy(Nkeep)=vy(i)
-            ay(Nkeep)=ay(i)
-            by(Nkeep)=by(i)
-            vth(Nkeep)=vth(i)
-            ath(Nkeep)=ath(i)
-            bth(Nkeep)=bth(i)
-            xp(Nkeep)=xp(i)
-            yp(Nkeep)=yp(i)
+            ikeep=ikeep+1
+            x(ikeep)=x(i)
+            y(ikeep)=y(i)
+            th(ikeep)=th(i)
+            d(ikeep)=d(i)
+            alpha(ikeep)=alpha(i)
+            inert(ikeep)=inert(i)
+            c(ikeep)=c(i)
+            rate(ikeep)=rate(i)
+            rate0(ikeep)=rate0(i)   
+            depth(ikeep)=depth(i)
+            vx(ikeep)=vx(i)
+            ax(ikeep)=ax(i)
+            bx(ikeep)=bx(i)
+            vy(ikeep)=vy(i)
+            ay(ikeep)=ay(i)
+            by(ikeep)=by(i)
+            vth(ikeep)=vth(i)
+            ath(ikeep)=ath(i)
+            bth(ikeep)=bth(i)
+            xp(ikeep)=xp(i)
+            yp(ikeep)=yp(i)
+            bound(ikeep)=bound(i)
+
+            ! index map for subsequent lists
+            renumber(i)=ikeep
          endif
       enddo
-      N=Nkeep         
+      Nkeep=ikeep
 
+      ! replace lists with new indices
+      do i=1,Nforce
+         forcelist(i)=renumber(forcelist(i))
+      enddo
+      do i=1,Ntrail
+         traillist(i)=renumber(traillist(i)) 
+      enddo
+
+      ! remove cells from neighborlist
+      ikeep=0
+      do i=1,N	
+         if(keeppart(i).eq.1) then
+            ikeep=ikeep+1
+            jkeep=0
+            do j=1,countn(i)
+               if(keeppart(nl(j,i)).eq.1) then
+                  jkeep=jkeep+1
+                  nl(jkeep,ikeep)=renumber(nl(j,i))
+               endif
+            enddo
+            countn(ikeep)=jkeep
+         endif
+      enddo
+
+      N=Nkeep         
+ 
       end
       
          
@@ -634,7 +666,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!           force            !!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine force(N,x,y,th,D,V,P,fx,fy,fth,Lx,torque) ! dimer
+      subroutine force(N,x,y,th,D,V,P,fx,fy,fth,torque) ! dimer
 
       parameter(Ntot=2**18)
       double precision pi
@@ -648,6 +680,7 @@
       double precision outang,num,dem1,dem2,yang,soutang,coutang
       double precision soutang2,coutang2,xdiagu,xdiagb,FwallR,PwallR
       double precision FwallT,PwallT,FwallB,PwallB,FwallL,PwallL,torque
+      double precision sigmasq
       integer countn(Ntot),nl(100,Ntot),N,ki,kj,jj,up,down
       integer forcelist(Ntot),Nforce,bound(Ntot)
 
@@ -655,7 +688,7 @@
       common /f10com/ bound
       common /f4com/ exp
       common /f12com/ nl,countn
-      common /f3com/ alpha ! aspect ratio
+      common /f3com/ alpha,Lx ! aspect ratio
       
       do i=1,N
          fx(i)=0d0
@@ -773,7 +806,7 @@
          i=forcelist(ii)
          do jj=ii+1,Nforce
             j=forcelist(jj)
-      
+ 
             xij=x(i)-x(j)
             xij=xij-dnint(xij/Lx)*Lx
             yij=y(i)-y(j)
