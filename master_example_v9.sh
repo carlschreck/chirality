@@ -18,9 +18,9 @@ rate0=1.0
 desync=0.4
 seed=101
 
-numsteps=1300000  # for production: numsteps=250000000
+numsteps=1300000  
 dataskip=100000
-prodskip=20000    # for production: prodskip=100000
+prodskip=20000 
 layerskip=100
 dt=4e-6
 b=4e3
