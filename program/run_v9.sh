@@ -29,8 +29,9 @@ prodskip=${16}
 layerskip=${17}
 dt=${18}
 b=${19}
+bani=${20}
 
-movie=${20}
+movie=${21}
 
 prodfile=prod_v9_ar${ar}_L${Lx}_layer${layerdepth}_desync${desync}_seed$7_b${b}_twist${twist}
 
@@ -59,6 +60,7 @@ time $rundir/ellipse_divide_linear_damped_twist_v9.o << EOF
   $layerskip
   $dt
   $b
+  $bani
   $movie
   $prodfile
 EOF

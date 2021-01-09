@@ -24,11 +24,12 @@ prodskip=100000
 layerskip=100
 dt=4e-6
 b=4e3
+bani=-4e3
     
 movie=.TRUE.
 
 for seed in `seq 1 10`;
 do
-  sbatch run_v9.sh $ar $Lx $D1 $twist $layerwidth $layerdepth $frontdepth $propdepth $bounddepth $traildepth $rate0 $desync $seed $numsteps $dataskip $prodskip $layerskip $dt $b $movie
+  sbatch run_v9.sh $ar $Lx $D1 $twist $layerwidth $layerdepth $frontdepth $propdepth $bounddepth $traildepth $rate0 $desync $seed $numsteps $dataskip $prodskip $layerskip $dt $b $bani $movie
 done
 

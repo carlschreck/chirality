@@ -87,8 +87,7 @@
       read(*,*) layerskip     ! number of steps between calulating depth 
       read(*,*) dt            ! time-step
       read(*,*) b             ! damping coefficient
-      
-      bani=b/2d0
+      read(*,*) bani          ! damping anisotropy (between -b and b)
       
       ! read output files
       read(*,*) movie         ! logical parameter for writing movie
