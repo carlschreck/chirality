@@ -38,7 +38,8 @@
       double precision vx(Ntot),vy(Ntot),vth(Ntot),ax(Ntot),ay(Ntot)
       double precision ath(Ntot),bx(Ntot),by(Ntot),bth(Ntot),fx(Ntot)
       double precision fy(Ntot),fth(Ntot),inert(Ntot),typ_inert,torque
-      double precision twist,twist_radians,t_double    
+      double precision twist,twist_radians,t_double
+      double precision bani
       integer N,seed,k,c(Ntot),i,Nforce,bound(Ntot),ntUL,ntDL
       integer forcelist(Ntot),keeppart(Ntot),prodskip,numsteps
       integer traillist(Ntot),countn(Ntot),nl(100,Ntot),dataskip
@@ -87,6 +88,8 @@
       read(*,*) dt            ! time-step
       read(*,*) b             ! damping coefficient
       
+      bani=b/2d0
+      
       ! read output files
       read(*,*) movie         ! logical parameter for writing movie
       read(*,*) file1         ! file name
@@ -111,7 +114,7 @@
 
       ! initialize positions, velocities, etc
       call initialize(N,c,d,x,y,th,inert,rate0,rate,vx,vy,vth,ax,ay,ath,
-     +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,seed)
+     +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,bani,seed)
 
       ! output initial configuration
       ! write(1,*) N
@@ -156,7 +159,7 @@
          call predict(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth)
          call force(N,x,y,th,D,V,P,fx,fy,fth,torque)
          call correct(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth,
-     +        fx,fy,fth,inert,b)
+     +        fx,fy,fth,inert,b,bani)
 
          ! output configuration
          if(mod(k,prodskip).eq.0) then
@@ -192,7 +195,8 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine initialize(N,c,d,x,y,th,inert,rate0,rate,vx,vy,vth,ax,
-     +     ay,ath,bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,seed)
+     +     ay,ath,bx,by,bth,alpha0,rate00,desync,D1,torque,
+     +     xp,yp,b,bani,seed)
       
       integer Ntot
       parameter(Ntot=2**18)      
@@ -203,7 +207,7 @@
       double precision ay(Ntot),bx(Ntot),by(Ntot),vth(Ntot),ath(Ntot)
       double precision bth(Ntot),fx(Ntot),fy(Ntot),fth(Ntot),alpha(Ntot)
       double precision ran2,alpha0,rate00,desync,xp(Ntot),yp(Ntot)
-      double precision V,P,D1,torque,b
+      double precision V,P,D1,torque,b,bani
       integer i,N,c(Ntot),bound(Ntot),Nforce,forcelist(Ntot)
       integer countn(Ntot),nl(100,Ntot),seed
       common /f3com/ alpha,Lx
@@ -234,8 +238,8 @@
       call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
       call force(N,x,y,th,D,V,P,fx,fy,fth,torque)
       do i=1,N
-         vx(i)=b*fx(i)
-         vy(i)=b*fy(i)
+         vx(i)=b*fx(i) + bani*(dcos(2*th(i))*fx(i)-dsin(2*th(i))*fy(i))
+         vy(i)=b*fy(i) - bani*(dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
          vth(i)=b*fth(i)/inert(i)
          ax(i)=0d0
          ay(i)=0d0
@@ -619,14 +623,14 @@
 !!!!!!!!!!!!!!!!!!!!!!!   corrects prediction   !!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
       subroutine correct(dt,N,x,y,th,vx,vy,vth,ax,ay,ath,bx,by,bth,
-     +     fx,fy,fth,inert,b)
+     +     fx,fy,fth,inert,b,bani)
       parameter(Ntot=2**18)
       integer i,N,ensemble
       double precision dt,x(Ntot),y(Ntot),vx(Ntot),vy(Ntot),ax(Ntot)
       double precision ay(Ntot),bx(Ntot),by(Ntot),th(Ntot),vth(Ntot)
       double precision ath(Ntot),bth(Ntot),fx(Ntot),fy(Ntot),fth(Ntot)
       double precision Lx,c1,c2,c3,gear0,gear2,gear3,cg0,cg2,cg3
-      double precision vxi,vyi,vthi,pvxi,pvyi,pvthi,corrx,corry,b
+      double precision vxi,vyi,vthi,pvxi,pvyi,pvthi,corrx,corry,b,bani
       double precision corrpx,corrpy,corr,corrth,corrpth,inert(Ntot)
 
       gear0 = 3d0/8d0
@@ -642,8 +646,8 @@
       cg3 = gear3*c1/c3
 
       do i=1,N
-         vxi = b*fx(i)
-         vyi = b*fy(i)
+         vxi = b*fx(i) + bani*(dcos(2*th(i))*fx(i)-dsin(2*th(i))*fy(i))
+         vyi = b*fy(i) - bani*(dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
          vthi = b*fth(i)/inert(i)
          corrx = vxi - vx(i)
          corry = vyi - vy(i)
