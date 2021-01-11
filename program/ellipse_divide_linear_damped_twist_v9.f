@@ -109,6 +109,7 @@
       ! open movie file
       if(movie) then
          open(unit=1,file=TRIM(file1)//'.dat')
+         open(unit=2,file=TRIM(file1)//'_adv.dat')
       endif
 
       ! initialize positions, velocities, etc
@@ -116,9 +117,11 @@
      +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,bani,seed)
 
       ! output initial configuration
-      ! write(1,*) N
+      write(1,*) N
       do i=1,N                        
-         write(1,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
+         write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
+     +        d(i)*alpha(i),depth(i),c(i)
+         write(2,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
      +        d(i)*alpha(i),depth(i),c(i),i,0
       enddo
          
@@ -162,9 +165,11 @@
 
          ! output configuration
          if(mod(k,prodskip).eq.0) then
-            ! write(1,*) N
+            write(1,*) N
             do i=1,N
-               write(1,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
+               write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
+     +              d(i)*alpha(i),depth(i),c(i)
+               write(2,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
      +              d(i)*alpha(i),depth(i),c(i),i,k/prodskip
             enddo
          endif
