@@ -242,8 +242,8 @@
       call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
       call force(N,x,y,th,D,V,P,fx,fy,fth,torque)
       do i=1,N
-         vx(i)=b*fx(i) + bani*(dcos(2*th(i))*fx(i)-dsin(2*th(i))*fy(i))
-         vy(i)=b*fy(i) - bani*(dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
+         vx(i)=b*fx(i) + bani*(dcos(2*th(i))*fx(i)+dsin(2*th(i))*fy(i))
+         vy(i)=b*fy(i) - bani*(-dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
          vth(i)=b*fth(i)/inert(i)
          ax(i)=0d0
          ay(i)=0d0
@@ -650,8 +650,8 @@
       cg3 = gear3*c1/c3
 
       do i=1,N
-         vxi = b*fx(i) + bani*(dcos(2*th(i))*fx(i)-dsin(2*th(i))*fy(i))
-         vyi = b*fy(i) - bani*(dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
+         vxi = b*fx(i) + bani*(dcos(2*th(i))*fx(i)+dsin(2*th(i))*fy(i))
+         vyi = b*fy(i) - bani*(-dsin(2*th(i))*fx(i)+dcos(2*th(i))*fy(i))
          vthi = b*fth(i)/inert(i)
          corrx = vxi - vx(i)
          corry = vyi - vy(i)
