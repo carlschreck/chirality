@@ -1,5 +1,7 @@
 #!/bin/bash
 
+gfortran -o ellipse_divide_linear_damped_twist_v9.o ellipse_divide_linear_damped_twist_v9.f
+
 ar=1.3
 D1=1.6
 Lx=20.0
