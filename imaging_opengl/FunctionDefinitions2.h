@@ -13,12 +13,21 @@ void drawEllipse2(void)
   glBegin(GL_POINTS);		
   
   z = 0.0;
-  index = int(spin);					    
+  index = int(spin);
+  double meany = 0.0;
+  int count = 0;
+  for(i=1;i<=N[index];i++){
+    if (yread[i][index]>0)
+      meany += yread[i][index];
+      count++;
+  }
+  meany = meany / count;
+
   for(i=1;i<=N[index];i++){
     sigy = sig1read[i][index];
     sigx = sig2read[i][index];
     x0 = xread[i][index];
-    y0 = yread[i][index];
+    y0 = yread[i][index] - meany;
     theta = thetaread[i][index];
 
     // pre-calculate
