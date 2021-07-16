@@ -1,5 +1,7 @@
 #!/bin/bash
 
+gfortran -o ellipse_divide_linear_damped_twist_v9.o ellipse_divide_linear_damped_twist_v9.f
+
 ar=1.3
 D1=1.6
 Lx=20.0
@@ -18,7 +20,7 @@ rate0=1.0
 desync=0.4
 seed=101
 
-numsteps=1300000  
+numsteps=400000  
 dataskip=100000
 prodskip=20000 
 layerskip=100
