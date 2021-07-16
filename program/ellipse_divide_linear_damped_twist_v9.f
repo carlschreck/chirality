@@ -121,8 +121,9 @@
       do i=1,N                        
          write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
      +        d(i)*alpha(i),depth(i),c(i)
-         write(2,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
-     +        d(i)*alpha(i),depth(i),c(i),i,0
+         write(2,'(6E20.12,3I16,3E20.12)') x(i),y(i),th(i),d(i),
+     +        d(i)*alpha(i),depth(i),c(i),i,0,
+     +        vx(i),vy(i),vth(i)
       enddo
          
       ! loop over time-steps 
@@ -169,8 +170,9 @@
             do i=1,N
                write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
      +              d(i)*alpha(i),depth(i),c(i)
-               write(2,'(6E20.12,3I16)') x(i),y(i),th(i),d(i),
-     +              d(i)*alpha(i),depth(i),c(i),i,k/prodskip
+               write(2,'(6E20.12,3I16,3E20.12)') x(i),y(i),th(i),d(i),
+     +              d(i)*alpha(i),depth(i),c(i),i,k/prodskip,
+     +              vx(i),vy(i),vth(i)
             enddo
          endif
 
