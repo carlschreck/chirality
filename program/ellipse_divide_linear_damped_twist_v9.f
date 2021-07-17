@@ -28,7 +28,6 @@
       parameter(Ntot=2**18)
       double precision pi
       parameter(pi=3.1415926535897932d0)
-  
       double precision x(Ntot),y(Ntot),th(Ntot),D(Ntot),D1,exp,ran2
       double precision ftol1,fret,alpha0,width,rate0(Ntot),alpha(Ntot)
       double precision dt,rate(Ntot),scale(Ntot),layerwidth,layerdepth
@@ -46,6 +45,7 @@
       integer Ntrail,Nsum,Nkeep,layerskip,Nprev
       character file1*80,file2*80,file3*80
       logical movie
+      integer id(Ntot),idmax
 
       common /f2com/ width
       common /f3com/ alpha,Lx
@@ -110,11 +110,13 @@
       if(movie) then
          open(unit=1,file=TRIM(file1)//'.dat')
          open(unit=2,file=TRIM(file1)//'_adv.dat')
+         open(unit=3,file=TRIM(file1)//'_lin.dat')
       endif
 
       ! initialize positions, velocities, etc
       call initialize(N,c,d,x,y,th,inert,rate0,rate,vx,vy,vth,ax,ay,ath,
-     +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,bani,seed)
+     +     bx,by,bth,alpha0,rate00,desync,D1,torque,xp,yp,b,bani,seed,
+     +     id,idmax)
 
       ! output initial configuration
       write(1,*) N
@@ -122,7 +124,7 @@
          write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
      +        d(i)*alpha(i),depth(i),c(i)
          write(2,'(6E20.12,3I16,3E20.12)') x(i),y(i),th(i),d(i),
-     +        d(i)*alpha(i),depth(i),c(i),i,0,
+     +        d(i)*alpha(i),depth(i),c(i),id(i),0,
      +        vx(i),vy(i),vth(i)
       enddo
          
@@ -135,14 +137,14 @@
             call calc_depth(N,Lx,d,x,y,layerwidth,depth)
             call remove_cells(N,Nforce,Ntrail,d,x,y,th,alpha,inert,
      +           c,rate,rate0,depth,vx,vy,vth,ax,ay,ath,bx,by,bth,
-     +           forcelist,traillist,xp,yp,nl,countn,bound)
+     +           forcelist,traillist,xp,yp,nl,countn,bound,id)
          endif
 
          ! grow and divide cells
          Nprev=N
          call grow_cells(N,Nsum,dt,x,y,th,D,c,rate,alpha0,rate0,
      +        seed,desync,traillist,depth,layerdepth,propdepth,
-     +        bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth)
+     +        bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth,id,idmax)
          if(N.gt.Nprev) then
             call makelist(N,x,y,D,xp,yp,countn,nl,alpha0)
          endif
@@ -171,7 +173,7 @@
                write(1,'(6E20.12,I8)') x(i),y(i),th(i),d(i),
      +              d(i)*alpha(i),depth(i),c(i)
                write(2,'(6E20.12,3I16,3E20.12)') x(i),y(i),th(i),d(i),
-     +              d(i)*alpha(i),depth(i),c(i),i,k/prodskip,
+     +              d(i)*alpha(i),depth(i),c(i),id(i),k/prodskip,
      +              vx(i),vy(i),vth(i)
             enddo
          endif
@@ -202,7 +204,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine initialize(N,c,d,x,y,th,inert,rate0,rate,vx,vy,vth,ax,
      +     ay,ath,bx,by,bth,alpha0,rate00,desync,D1,torque,
-     +     xp,yp,b,bani,seed)
+     +     xp,yp,b,bani,seed,id,idmax)
       
       integer Ntot
       parameter(Ntot=2**18)      
@@ -216,6 +218,7 @@
       double precision V,P,D1,torque,b,bani
       integer i,N,c(Ntot),bound(Ntot),Nforce,forcelist(Ntot)
       integer countn(Ntot),nl(100,Ntot),seed
+      integer id(Ntot),idmax
       common /f3com/ alpha,Lx
       common /f8com/ forcelist,Nforce
       common /f10com/ bound
@@ -232,8 +235,10 @@
          alpha(i)=alpha0*(1d0+ran2(seed))
          inert(i)=(1d0+alpha(i)**2)/16d0*d(i)**2
          rate0(i)=rate00
-         rate(i)=(1d0+(ran2(seed)-0.5d0)*desync)*rate0(i)      
+         rate(i)=(1d0+(ran2(seed)-0.5d0)*desync)*rate0(i)
+         id(i)=i
       enddo
+      idmax=N
       
        ! set initial velocities     
       Nforce=N
@@ -340,7 +345,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine grow_cells(N,Nsum,dt,x,y,th,D,c,rate,alpha0,rate0,
      +     seed,desync,traillist,depth,layerdepth,propdepth,
-     +     bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth)
+     +     bounddepth,vx,vy,vth,ax,ay,ath,bx,by,bth,id,idmax)
       
       integer Ntot
       parameter(Ntot=2**18)      
@@ -351,6 +356,7 @@
       double precision ath(Ntot),bx(Ntot),by(Ntot),bth(Ntot),alphadiv
       integer i,N,Nsum,c(Ntot),bound(Ntot),Nforce,seed
       integer forcelist(Ntot),traillist(Ntot)
+      integer id(Ntot),idmax
       common /f3com/ alpha,Lx
       common /f8com/ forcelist,Nforce
       common /f10com/ bound
@@ -369,6 +375,9 @@
             alphadiv=alpha(i)
             
             ! divide into 2 - 1st assigned index N+1
+            id(N)=idmax+1
+            idmax=idmax+1
+            write(*,'(I8)')idmax
             N=N+1
             Nsum=Nsum+1
             c(N)=c(i)
@@ -388,6 +397,8 @@
             bx(N)=bx(i)
             by(N)=by(i)
             bth(N)=bth(i)
+
+            write(3,'(2I8,2E20.12)')N,id(i),x(N),y(N)
             
             ! divide into 2 - 1st assigned index i
             x(i)=x(i)-D(i)*alphadiv/4d0*dcos(th(i))
@@ -424,7 +435,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine remove_cells(N,Nforce,Ntrail,d,x,y,th,alpha,
      +     inert,c,rate,rate0,depth,vx,vy,vth,ax,ay,ath,
-     +     bx,by,bth,forcelist,traillist,xp,yp,nl,countn,bound)     
+     +     bx,by,bth,forcelist,traillist,xp,yp,nl,countn,bound,id)
  
       integer Ntot
       parameter(Ntot=2**18)      
@@ -433,6 +444,7 @@
       double precision ax(Ntot),ay(Ntot),ath(Ntot),rate0(Ntot)
       double precision bx(Ntot),by(Ntot),bth(Ntot),inert(Ntot)
       double precision xp(Ntot),yp(Ntot)
+      integer id(Ntot)
       integer N,Nforce,Ntrail,Nkeep,c(Ntot),keeppart(Ntot)
       integer forcelist(Ntot),traillist(Ntot),renumber(Ntot)
       integer countn(Ntot),nl(100,Ntot),ikeep,jkeep,bound(Ntot)
@@ -453,6 +465,7 @@
       do i=1,N
          if(keeppart(i).eq.1) then
             ikeep=ikeep+1
+            id(ikeep)=id(i)
             x(ikeep)=x(i)
             y(ikeep)=y(i)
             th(ikeep)=th(i)
